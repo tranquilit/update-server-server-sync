@@ -98,7 +98,7 @@ namespace Microsoft.PackageGraph.MicrosoftUpdate.Compression
             {
                 File.WriteAllBytes(cabTempFile, compressedData);
 
-                var startInfo = new ProcessStartInfo("cabextract", $"--pipe \"{cabTempFile}\"")
+                var startInfo = new ProcessStartInfo("cabextract", $"--pipe \"{cabTempFile}\" > \"{xmlTempFile}\"")
                 {
                     UseShellExecute = false,
                     // The decompressed text is Unicode
@@ -112,8 +112,9 @@ namespace Microsoft.PackageGraph.MicrosoftUpdate.Compression
                 expandProcess.WaitForExit();
 
                 // Recompress the XML with GZIP as UTF8
+                using var decompressor = File.OpenRead(xmlTempFile);
                 using var recompressor = new GZipStream(inMemoryStream, CompressionLevel.Fastest, true);
-                recompressor.Write(Encoding.UTF8.GetBytes(text));
+                decompressor.CopyTo(recompressor);
 
             }
             catch (Exception)
