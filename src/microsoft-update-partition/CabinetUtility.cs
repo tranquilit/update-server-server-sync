@@ -92,14 +92,17 @@ namespace Microsoft.PackageGraph.MicrosoftUpdate.Compression
             // We use temporary files to write the in-memory cabinet,
             // Then run cabextract on it with --pipe output
             var cabTempFile = Path.GetTempFileName();
-
+            var xmlTempFile = Path.GetTempFileName();
+            
             var inMemoryStream = new MemoryStream();
             try
             {
                 File.WriteAllBytes(cabTempFile, compressedData);
 
-                var startInfo = new ProcessStartInfo("cabextract", $"--pipe \"{cabTempFile}\" > \"{xmlTempFile}\"")
+                var startInfo = new ProcessStartInfo
                 {
+                    FileName = "cabextract",
+                    Arguments = $"--pipe \"{cabTempFile}\"",
                     UseShellExecute = false,
                     // The decompressed text is Unicode
                     StandardOutputEncoding = Encoding.Unicode,
@@ -108,8 +111,15 @@ namespace Microsoft.PackageGraph.MicrosoftUpdate.Compression
                 var expandProcess = Process.Start(startInfo);
 
                 // Read the decompressed data from the pipe
-                var text = expandProcess.StandardOutput.ReadToEnd();
-                expandProcess.WaitForExit();
+                if (expandProcess != null)
+                {
+                    using (StreamWriter writer = new StreamWriter(xmlTempFile))
+                    {
+                        expandProcess.StandardOutput.BaseStream.CopyTo(writer.BaseStream);
+                    }
+
+                    expandProcess.WaitForExit();
+                }
 
                 // Recompress the XML with GZIP as UTF8
                 using var decompressor = File.OpenRead(xmlTempFile);
@@ -125,6 +135,11 @@ namespace Microsoft.PackageGraph.MicrosoftUpdate.Compression
             if (File.Exists(cabTempFile))
             {
                 File.Delete(cabTempFile);
+            }
+
+            if (File.Exists(xmlTempFile))
+            {
+                File.Delete(xmlTempFile);
             }
 
             if (inMemoryStream != null)
