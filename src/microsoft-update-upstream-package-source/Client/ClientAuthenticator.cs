@@ -159,7 +159,12 @@ namespace Microsoft.PackageGraph.MicrosoftUpdate.Source
         {
             GetAuthConfigResponse authConfigResponse;
 
-            var httpBinding = new System.ServiceModel.BasicHttpBinding();
+            var httpBinding = new System.ServiceModel.BasicHttpBinding()
+            {
+                ReceiveTimeout = new TimeSpan(0, 3, 0),
+                SendTimeout = new TimeSpan(0, 3, 0),
+                OpenTimeout = new TimeSpan(0, 3, 0)
+            };
             var upstreamEndpoint = new System.ServiceModel.EndpointAddress(UpstreamEndpoint.ServerSyncURI);
             if (upstreamEndpoint.Uri.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase))
             {
